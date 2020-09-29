@@ -1,0 +1,38 @@
+Title Scene
+-Sword is placed in the middle screen and when the player pushed any button it will start the
+ cinematic cut scene and starting to blend trought the game.
+
+Game Scene Start Part( if possible )
+-Minimum Tutorial
+ Player Walk
+ Slay Enemy
+ Level Up
+ Skill (Slay Enemy with Skill)
+ Cutscene to the kinda open world (Shit cutscene if possible Good one)
+
+Game Design
+-Action RPG
+ Level Up System
+ Combo System
+ Smooth Animation
+ Good Control( Controller )
+ Skills
+
+-Good Single Map
+ Kinda open world
+ Puzzle reward( What kind of Puzzle? What kind of reward? Item? )
+
+-Final Dungeon Map
+ Platform puzzle reward( What kind of Puzzle? What kind of reward? Item? )
+ Boss
+
+-Good Data Management
+
+-Good Cinematic( Start and Final )
+
+-No Result Scene
+ When the player killed the boss, it will start to blend to a black screen with cinematic
+ then pop up the game logo with bunchs of good shit sound.
+
+-Optional
+ Dialogue
