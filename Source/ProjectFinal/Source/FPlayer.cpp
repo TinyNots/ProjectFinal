@@ -42,11 +42,15 @@ AFPlayer::AFPlayer()
 	{
 		CharacterMovementComp->bOrientRotationToMovement = true;
 		CharacterMovementComp->RotationRate = FRotator(0.0f, 360.0f, 0.0f);
-		CharacterMovementComp->bAllowPhysicsRotationDuringAnimRootMotion = true;
 	}
 
 	CurrentCombo = 0;
-	bIsNextAttackPressed = false;
+	bIsAttackPressed = false;
+	bReadyToNextAttack = false;
+	AttackRotationInterpSpeed = 10.0f;
+	bStartAttackInterp = false;
+	TargetRotation = FRotator(0.0f);
+	YawRotationThreshold = 3.0f;
 
 	// Animation Init
 	HeadInterpSpeed = 3.0f;
@@ -78,15 +82,13 @@ void AFPlayer::BeginPlay()
 
 void AFPlayer::HandleCombo()
 {
-	if (bIsNextAttackPressed)
-	{
-		ToNextAttack();
-		bIsNextAttackPressed = false;
-	}
-	else
-	{
-		CurrentCombo = 0;
-	}
+	bReadyToNextAttack = true;
+}
+
+void AFPlayer::RestartCombo()
+{
+	CurrentCombo = 0;
+	bReadyToNextAttack = false;
 }
 
 // Called every frame
@@ -94,6 +96,9 @@ void AFPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	NextAttackCheck();
+
+	AttackRotationUpdate(DeltaTime);
 }
 
 // Called to bind functionality to input
@@ -127,16 +132,22 @@ void AFPlayer::MoveRight(float Value)
 
 void AFPlayer::Attack()
 {
+	bIsAttackPressed = true;
 	if (AnimInstance && AttackMontage)
 	{
+		if (AnimInstance->Montage_IsPlaying(AttackMontage))
+		{
+			return;
+		}
+
+		bIsAttackPressed = false;
 		CurrentCombo++;
 
-		FString StringComboName = "Combo0";
-		StringComboName.AppendInt(CurrentCombo);
-		FName ComboSectionName = FName(*StringComboName);
+		// Start Interp To Last Input Direction
+		bStartAttackInterp = true;
+		TargetRotation = GetLastMovementInputVector().Rotation();
 
-		AnimInstance->Montage_Play(AttackMontage);
-		AnimInstance->Montage_JumpToSection(ComboSectionName, AttackMontage);
+		PlayAttackMontage();
 	}
 }
 
@@ -144,13 +155,60 @@ void AFPlayer::ToNextAttack()
 {
 	if (AnimInstance && AttackMontage)
 	{
+		bIsAttackPressed = false;
+		bReadyToNextAttack = false;
 		CurrentCombo++;
+
+		// Start Interp To Last Input Direction
+		bStartAttackInterp = true;
+		TargetRotation = GetLastMovementInputVector().Rotation();
 
 		FString StringComboName = "Combo0";
 		StringComboName.AppendInt(CurrentCombo);
 		FName ComboSectionName = FName(*StringComboName);
 
-		AnimInstance->Montage_Play(AttackMontage);
-		AnimInstance->Montage_JumpToSection(ComboSectionName, AttackMontage);
+		AnimInstance->Montage_Stop(0.25f, AttackMontage);
+		PlayAttackMontage();
+	}
+}
+
+void AFPlayer::NextAttackCheck()
+{
+	if (bIsAttackPressed && bReadyToNextAttack)
+	{
+		ToNextAttack();
+	}
+}
+
+void AFPlayer::PlayAttackMontage()
+{
+	FString StringComboName = "Combo0";
+	StringComboName.AppendInt(CurrentCombo);
+	FName ComboSectionName = FName(*StringComboName);
+
+	AnimInstance->Montage_Play(AttackMontage);
+	AnimInstance->Montage_JumpToSection(ComboSectionName, AttackMontage);
+}
+
+void AFPlayer::AttackRotationUpdate(float DeltaTime)
+{
+	if (bStartAttackInterp)
+	{
+		if (TargetRotation == FRotator::ZeroRotator)
+		{
+			bStartAttackInterp = false;
+			return;
+		}
+
+		FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, AttackRotationInterpSpeed);
+		NewRotation.Pitch = GetActorRotation().Pitch;
+		SetActorRotation(NewRotation);
+
+		if (NewRotation.Yaw >= TargetRotation.Yaw - YawRotationThreshold &&
+			NewRotation.Yaw <= TargetRotation.Yaw + YawRotationThreshold)
+		{
+			bStartAttackInterp = false;
+			UE_LOG(LogTemp, Log, TEXT("InterpToLastInputDirectionStopped"));
+		}
 	}
 }

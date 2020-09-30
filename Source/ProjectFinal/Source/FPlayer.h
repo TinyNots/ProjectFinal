@@ -51,11 +51,29 @@ protected:
 	int CurrentCombo;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
-	bool bIsNextAttackPressed;
+	bool bIsAttackPressed;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
+	bool bReadyToNextAttack;
 
 	// If next attack boolen is true move to next attack
 	UFUNCTION(BlueprintCallable)
 	void HandleCombo();
+
+	UFUNCTION(BlueprintCallable)
+	void RestartCombo();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player | Attack")
+	float AttackRotationInterpSpeed;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
+	bool bStartAttackInterp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
+	FRotator TargetRotation;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player | Attack")
+	float YawRotationThreshold;
 
 public:	
 	// Called every frame
@@ -81,4 +99,10 @@ private:
 	void Attack();
 
 	void ToNextAttack();
+
+	void NextAttackCheck();
+
+	void PlayAttackMontage();
+
+	void AttackRotationUpdate(float DeltaTime);
 };
