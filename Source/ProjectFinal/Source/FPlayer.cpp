@@ -8,12 +8,18 @@
 #include "Camera/PlayerCameraManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "FHealthComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Animation/AnimInstance.h"
 
 // Sets default values
 AFPlayer::AFPlayer()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+	WeaponSocketName = "hand_rSocket";
 
 	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
 	SpringArmComp->bUsePawnControlRotation = true;
@@ -26,6 +32,25 @@ AFPlayer::AFPlayer()
 	CameraComp->SetupAttachment(SpringArmComp);
 
 	HealthComp = CreateDefaultSubobject<UFHealthComponent>(TEXT("HealthComp"));
+
+	WeaponMeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMeshComp"));
+	WeaponMeshComp->SetupAttachment(GetMesh(), WeaponSocketName);
+
+	bUseControllerRotationYaw = false;
+	UCharacterMovementComponent* CharacterMovementComp = GetCharacterMovement();
+	if (CharacterMovementComp)
+	{
+		CharacterMovementComp->bOrientRotationToMovement = true;
+		CharacterMovementComp->RotationRate = FRotator(0.0f, 360.0f, 0.0f);
+		CharacterMovementComp->bAllowPhysicsRotationDuringAnimRootMotion = true;
+	}
+
+	CurrentCombo = 0;
+	bIsNextAttackPressed = false;
+
+	// Animation Init
+	HeadInterpSpeed = 3.0f;
+	HeadDegreeThreshold = 120.0f;
 }
 
 // Called when the game starts or when spawned
@@ -42,6 +67,25 @@ void AFPlayer::BeginPlay()
 			CameraManager->ViewPitchMin = -45.0f;
 			CameraManager->ViewPitchMax = 45.0f;
 		}
+	}
+
+	AnimInstance = GetMesh()->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("There's problem with your AnimInstace"));
+	}
+}
+
+void AFPlayer::HandleCombo()
+{
+	if (bIsNextAttackPressed)
+	{
+		ToNextAttack();
+		bIsNextAttackPressed = false;
+	}
+	else
+	{
+		CurrentCombo = 0;
 	}
 }
 
@@ -62,15 +106,51 @@ void AFPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	PlayerInputComponent->BindAxis("LookUp", this, &AFPlayer::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("Turn", this, &AFPlayer::AddControllerYawInput);
+
+	PlayerInputComponent->BindAction("Attack", EInputEvent::IE_Pressed, this, &AFPlayer::Attack);
+}
+
+UCameraComponent* AFPlayer::GetCameraComponent()
+{
+	return CameraComp;
 }
 
 void AFPlayer::MoveForward(float Value)
 {
-	AddMovementInput(GetActorForwardVector() * Value);
+	AddMovementInput(CameraComp->GetForwardVector() * Value);
 }
 
 void AFPlayer::MoveRight(float Value)
 {
-	AddMovementInput(GetActorRightVector() * Value);
+	AddMovementInput(CameraComp->GetRightVector() * Value);
 }
 
+void AFPlayer::Attack()
+{
+	if (AnimInstance && AttackMontage)
+	{
+		CurrentCombo++;
+
+		FString StringComboName = "Combo0";
+		StringComboName.AppendInt(CurrentCombo);
+		FName ComboSectionName = FName(*StringComboName);
+
+		AnimInstance->Montage_Play(AttackMontage);
+		AnimInstance->Montage_JumpToSection(ComboSectionName, AttackMontage);
+	}
+}
+
+void AFPlayer::ToNextAttack()
+{
+	if (AnimInstance && AttackMontage)
+	{
+		CurrentCombo++;
+
+		FString StringComboName = "Combo0";
+		StringComboName.AppendInt(CurrentCombo);
+		FName ComboSectionName = FName(*StringComboName);
+
+		AnimInstance->Montage_Play(AttackMontage);
+		AnimInstance->Montage_JumpToSection(ComboSectionName, AttackMontage);
+	}
+}

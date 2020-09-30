@@ -18,7 +18,7 @@ protected:
 	virtual void NativeInitializeAnimation() override;
 
 	UFUNCTION(BlueprintCallable, Category = "PlayerAnimInstance")
-	void UpdateAnimationProperties();
+	void UpdateAnimationProperties(float DeltaTime);
 
 	UPROPERTY(BlueprintReadOnly, Category = "PlayerAnimInstance")
 	AFPlayer* Player;
@@ -28,4 +28,14 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerAnimInstance")
 	float Direction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerAnimInstance")
+	float LookPitch;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerAnimInstance")
+	float LookYaw;
+
+private:
+
+	void HeadRotation(float DeltaTime);
 };

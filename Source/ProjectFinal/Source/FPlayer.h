@@ -9,6 +9,9 @@
 class USpringArmComponent;
 class UCameraComponent;
 class UFHealthComponent;
+class USkeletalMeshComponent;
+class UAnimMontage;
+class UAnimInstance;
 
 UCLASS()
 class PROJECTFINAL_API AFPlayer : public ACharacter
@@ -32,6 +35,28 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player")
 	UFHealthComponent* HealthComp;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player")
+	UStaticMeshComponent* WeaponMeshComp;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player")
+	FName WeaponSocketName;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player")
+	UAnimMontage* AttackMontage;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player")
+	UAnimInstance* AnimInstance;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
+	int CurrentCombo;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
+	bool bIsNextAttackPressed;
+
+	// If next attack boolen is true move to next attack
+	UFUNCTION(BlueprintCallable)
+	void HandleCombo();
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -39,9 +64,21 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	UCameraComponent* GetCameraComponent();
+
+	UPROPERTY(EditDefaultsOnly,BlueprintReadOnly,Category = "Player | Animation")
+	float HeadInterpSpeed;
+
+	UPROPERTY(EditDefaultsOnly,BlueprintReadOnly,Category = "Player | Animation")
+	float HeadDegreeThreshold;
+
 private:
 
 	void MoveForward(float Value);
 
 	void MoveRight(float Value);
+
+	void Attack();
+
+	void ToNextAttack();
 };
