@@ -55,6 +55,7 @@ AFPlayer::AFPlayer()
 	// Animation Init
 	HeadInterpSpeed = 3.0f;
 	HeadDegreeThreshold = 120.0f;
+	bReadyToJump = true;
 }
 
 // Called when the game starts or when spawned
@@ -99,6 +100,12 @@ void AFPlayer::Tick(float DeltaTime)
 	NextAttackCheck();
 
 	AttackRotationUpdate(DeltaTime);
+
+	if (GetCharacterMovement()->IsFalling())
+	{
+		UE_LOG(LogTemp, Log, TEXT("Test"));
+	}
+
 }
 
 // Called to bind functionality to input
@@ -113,11 +120,22 @@ void AFPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAxis("Turn", this, &AFPlayer::AddControllerYawInput);
 
 	PlayerInputComponent->BindAction("Attack", EInputEvent::IE_Pressed, this, &AFPlayer::Attack);
+	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Pressed, this, &AFPlayer::Jump);
 }
 
 UCameraComponent* AFPlayer::GetCameraComponent()
 {
 	return CameraComp;
+}
+
+void AFPlayer::Jump()
+{
+	if (bReadyToJump)
+	{
+		bReadyToJump = false;
+		bPressedJump = true;
+		JumpKeyHoldTime = 0.0f;
+	}
 }
 
 void AFPlayer::MoveForward(float Value)
@@ -167,7 +185,7 @@ void AFPlayer::ToNextAttack()
 		StringComboName.AppendInt(CurrentCombo);
 		FName ComboSectionName = FName(*StringComboName);
 
-		AnimInstance->Montage_Stop(0.25f, AttackMontage);
+		AnimInstance->Montage_Stop(0.1f, AttackMontage);
 		PlayAttackMontage();
 	}
 }

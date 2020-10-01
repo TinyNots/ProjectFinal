@@ -35,6 +35,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerAnimInstance")
 	float LookYaw;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerAnimInstance")
+	bool bIsJumping;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerAnimInstance")
+	bool bIsFalling;
+
 private:
 
 	void HeadRotation(float DeltaTime);

@@ -90,6 +90,11 @@ public:
 	UPROPERTY(EditDefaultsOnly,BlueprintReadOnly,Category = "Player | Animation")
 	float HeadDegreeThreshold;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Player | Animation")
+	bool bReadyToJump;
+
+	virtual void Jump() override;
+
 private:
 
 	void MoveForward(float Value);

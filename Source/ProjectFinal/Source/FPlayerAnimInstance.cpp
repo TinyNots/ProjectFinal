@@ -6,6 +6,7 @@
 #include "Kismet/KismetMaterialLibrary.h"
 #include "GameFramework/Controller.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 void UFPlayerAnimInstance::NativeInitializeAnimation()
 {
@@ -18,6 +19,8 @@ void UFPlayerAnimInstance::NativeInitializeAnimation()
 	Direction = 0.0f;
 	LookPitch = 0.0f;
 	LookYaw = 0.0f;
+	bIsJumping = false;
+	bIsFalling = false;
 }
 
 void UFPlayerAnimInstance::UpdateAnimationProperties(float DeltaTime)
@@ -26,6 +29,8 @@ void UFPlayerAnimInstance::UpdateAnimationProperties(float DeltaTime)
 	{
 		MovementSpeed = FVector::DotProduct(Player->GetVelocity(), Player->GetActorForwardVector());
 		Direction = FVector::DotProduct(Player->GetVelocity(), Player->GetActorRightVector());
+		bIsJumping = Player->bWasJumping;
+		bIsFalling = Player->GetCharacterMovement()->IsFalling();
 
 		HeadRotation(DeltaTime);
 	}
