@@ -12,6 +12,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Animation/AnimInstance.h"
+#include "ProjectFinal/ProjectFinal.h"
+#include "FEnemy.h"
 
 // Sets default values
 AFPlayer::AFPlayer()
@@ -33,7 +35,12 @@ AFPlayer::AFPlayer()
 
 	HealthComp = CreateDefaultSubobject<UFHealthComponent>(TEXT("HealthComp"));
 
+	// Weapon Collision Setup
 	WeaponMeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMeshComp"));
+	WeaponMeshComp->SetCollisionObjectType(COLLISION_WEAPON);
+	WeaponMeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	WeaponMeshComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	WeaponMeshComp->SetCollisionResponseToChannel(COLLISION_ENEMY, ECollisionResponse::ECR_Overlap);
 	WeaponMeshComp->SetupAttachment(GetMesh(), WeaponSocketName);
 
 	bUseControllerRotationYaw = false;
@@ -51,6 +58,7 @@ AFPlayer::AFPlayer()
 	bStartAttackInterp = false;
 	TargetRotation = FRotator(0.0f);
 	YawRotationThreshold = 3.0f;
+	bIsAttacking = false;
 
 	// Animation Init
 	HeadInterpSpeed = 3.0f;
@@ -79,6 +87,8 @@ void AFPlayer::BeginPlay()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("There's problem with your AnimInstace"));
 	}
+
+	WeaponMeshComp->OnComponentBeginOverlap.AddDynamic(this, &AFPlayer::CombatOnOverlapBegin);
 }
 
 void AFPlayer::HandleCombo()
@@ -90,6 +100,7 @@ void AFPlayer::RestartCombo()
 {
 	CurrentCombo = 0;
 	bReadyToNextAttack = false;
+	bIsAttacking = false;
 }
 
 // Called every frame
@@ -130,11 +141,19 @@ UCameraComponent* AFPlayer::GetCameraComponent()
 
 void AFPlayer::Jump()
 {
-	if (bReadyToJump)
+	if (bReadyToJump && !bIsAttacking)
 	{
 		bReadyToJump = false;
 		bPressedJump = true;
 		JumpKeyHoldTime = 0.0f;
+	}
+}
+
+void AFPlayer::CombatOnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor && DamageTypeClass)
+	{
+		UGameplayStatics::ApplyDamage(OtherActor, 10.0f, GetController(), this, DamageTypeClass);
 	}
 }
 
@@ -151,7 +170,7 @@ void AFPlayer::MoveRight(float Value)
 void AFPlayer::Attack()
 {
 	bIsAttackPressed = true;
-	if (AnimInstance && AttackMontage)
+	if (AnimInstance && AttackMontage && !GetCharacterMovement()->IsFalling())
 	{
 		if (AnimInstance->Montage_IsPlaying(AttackMontage))
 		{
@@ -159,6 +178,7 @@ void AFPlayer::Attack()
 		}
 
 		bIsAttackPressed = false;
+		bIsAttacking = true;
 		CurrentCombo++;
 
 		// Start Interp To Last Input Direction
@@ -226,7 +246,6 @@ void AFPlayer::AttackRotationUpdate(float DeltaTime)
 			NewRotation.Yaw <= TargetRotation.Yaw + YawRotationThreshold)
 		{
 			bStartAttackInterp = false;
-			UE_LOG(LogTemp, Log, TEXT("InterpToLastInputDirectionStopped"));
 		}
 	}
 }

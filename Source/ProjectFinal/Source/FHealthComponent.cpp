@@ -30,7 +30,7 @@ void UFHealthComponent::BeginPlay()
 
 void UFHealthComponent::HandleTakeAnyDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
 {
-	if (Damage < 0.0f)
+	if (Damage <= 0.0f)
 	{
 		return;
 	}
