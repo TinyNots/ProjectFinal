@@ -6,6 +6,9 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "ProjectFinal/ProjectFinal.h"
+#include "Animation/AnimInstance.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "AIController.h"
 
 // Sets default values
 AFEnemy::AFEnemy()
@@ -24,6 +27,20 @@ AFEnemy::AFEnemy()
 	MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	MeshComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	MeshComp->SetCollisionResponseToChannel(COLLISION_WEAPON, ECollisionResponse::ECR_Overlap);
+
+	bIsDied = false;
+	DestroyLifeSpan = 10.0f;
+
+	// Disable rotation yaw for AI Controller
+	bUseControllerRotationYaw = false;
+	GetCharacterMovement()->bUseControllerDesiredRotation = true;
+
+	// Dissolve Init
+	bStartDissolve = false;
+	DissolveValue = 1.5f;
+	DissolveTargetValue = -1.0f;
+	DissolveInterpSpeed = 0.5f;
+	DissolveDelayTime = 2.0f;
 }
 
 // Called when the game starts or when spawned
@@ -32,6 +49,26 @@ void AFEnemy::BeginPlay()
 	Super::BeginPlay();
 	
 	HealthComp->OnHealthChanged.AddDynamic(this, &AFEnemy::OnHealthChanged);
+
+	AnimInstance = GetMesh()->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("There's problem with your AnimInstace"));
+	}
+
+	if (BehaviorTree)
+	{
+		AAIController* AIController = Cast<AAIController>(GetController());
+		if (AIController)
+		{
+			AIController->RunBehaviorTree(BehaviorTree);
+		}
+	}
+}
+
+void AFEnemy::StartDissolve()
+{
+	bStartDissolve = true;
 }
 
 // Called every frame
@@ -39,6 +76,7 @@ void AFEnemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	DissolveInterpUpdate(DeltaTime);
 }
 
 // Called to bind functionality to input
@@ -54,6 +92,29 @@ void AFEnemy::Attack()
 
 void AFEnemy::OnHealthChanged(UFHealthComponent* OwnerHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
 {
-	//UE_LOG(LogTemp, Log, TEXT("AFEnemy Changed"));
+	if (Health <= 0.0f && !bIsDied)
+	{
+		bIsDied = true;
+
+		GetCharacterMovement()->StopMovementImmediately();
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		DetachFromControllerPendingDestroy();
+		SetLifeSpan(DestroyLifeSpan);
+	}
 }
 
+void AFEnemy::DissolveInterpUpdate(float DeltaTime)
+{
+	if (bStartDissolve)
+	{
+		DissolveValue = FMath::FInterpTo(DissolveValue, DissolveTargetValue, DeltaTime, DissolveInterpSpeed);
+		GetMesh()->SetScalarParameterValueOnMaterials("Dissolve", DissolveValue);
+
+		if (DissolveValue <= DissolveTargetValue)
+		{
+			bStartDissolve = false;
+		}
+	}
+}

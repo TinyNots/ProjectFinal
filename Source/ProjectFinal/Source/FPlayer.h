@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "EnumHeader.h"
 #include "FPlayer.generated.h"
 
 class USpringArmComponent;
@@ -12,6 +13,9 @@ class UFHealthComponent;
 class USkeletalMeshComponent;
 class UAnimMontage;
 class UAnimInstance;
+class APlayerCameraManager;
+class USoundCue;
+class UBoxComponent;
 
 UCLASS()
 class PROJECTFINAL_API AFPlayer : public ACharacter
@@ -38,14 +42,20 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player")
 	UStaticMeshComponent* WeaponMeshComp;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player")
+	UBoxComponent* WeaponBoxComp;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player")
 	FName WeaponSocketName;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player")
 	UAnimMontage* AttackMontage;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player")
+	UPROPERTY(BlueprintReadOnly, Category = "Player")
 	UAnimInstance* AnimInstance;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Player")
+	APlayerCameraManager* CameraManager;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
 	int CurrentCombo;
@@ -81,6 +91,29 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player | Attack")
 	TSubclassOf<UDamageType> DamageTypeClass;
 
+	FTimerHandle TimeHandle_SlowTimeDilation;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player | Attack")
+	float ToSlowMoDelay;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player | Attack")
+	float SlowMoTimeDilation;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player | Attack")
+	float ResetTimeDelay;
+
+	FTimerHandle TimeHandle_ResetTimeDilation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
+	bool bIsHitStopping;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player | Attack")
+	TSubclassOf<UCameraShake> AttackCamShake;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player | Attack")
+	USoundCue* AttackHitSound;
+
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -104,6 +137,18 @@ public:
 	UFUNCTION()
 	void CombatOnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	UFUNCTION(BlueprintCallable)
+	void ChangeHitStop(EHitStop HitStopPreset, float NewToSlowMoDelay = 0.0f, float NewSlowMoTimeDilation = 0.0f, float NewResetTimeDelay = 0.0f);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Animaiton")
+	bool bIsInGame;
+
+	UFUNCTION(BlueprintCallable)
+	void EnableAttackCollider();
+
+	UFUNCTION(BlueprintCallable)
+	void DisableAttackCollider();
+
 private:
 
 	void MoveForward(float Value);
@@ -119,4 +164,10 @@ private:
 	void PlayAttackMontage();
 
 	void AttackRotationUpdate(float DeltaTime);
+
+	void ResetTimeDilation(AActor* OtherActor);
+
+	void SlowTimeDilation(AActor* OtherActor);
+
+	void StartHitStop(AActor* OtherActor);
 };

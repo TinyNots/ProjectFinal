@@ -11,7 +11,6 @@ UFHealthComponent::UFHealthComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	DefaultHealth = 100.0f;
-	Health = DefaultHealth;
 }
 
 
@@ -25,6 +24,8 @@ void UFHealthComponent::BeginPlay()
 	{
 		MyOwner->OnTakeAnyDamage.AddDynamic(this, &UFHealthComponent::HandleTakeAnyDamage);
 	}
+
+	Health = DefaultHealth;
 }
 
 

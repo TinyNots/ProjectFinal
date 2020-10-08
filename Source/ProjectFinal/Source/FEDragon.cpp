@@ -16,10 +16,5 @@ void AFEDragon::BeginPlay()
 
 void AFEDragon::OnHealthChanged(UFHealthComponent* OwnerHealthComp, float Health, float HealthDelta, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
 {
-	if (Health <= 0.0f)
-	{
-		//ToDo Die
-
-		return;
-	}
+	Super::OnHealthChanged(OwnerHealthComp, Health, HealthDelta, DamageType, InstigatedBy, DamageCauser);
 }

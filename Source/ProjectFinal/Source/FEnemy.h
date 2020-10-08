@@ -7,6 +7,9 @@
 #include "FEnemy.generated.h"
 
 class UFHealthComponent;
+class UAnimMontage;
+class UAnimInstance;
+class UBehaviorTree;
 
 UCLASS()
 class PROJECTFINAL_API AFEnemy : public ACharacter
@@ -27,6 +30,33 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy")
 	UAnimMontage* DieMontage;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Enemy")
+	UAnimInstance* AnimInstance;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy")
+	UBehaviorTree* BehaviorTree;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy")
+	float DestroyLifeSpan;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy | Dissolve")
+	bool bStartDissolve;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy | Dissolve")
+	float DissolveValue;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy | Dissolve")
+	float DissolveTargetValue;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy | Dissolve")
+	float DissolveInterpSpeed;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy | Dissolve")
+	float DissolveDelayTime;
+
+	UFUNCTION(BlueprintCallable)
+	void StartDissolve();
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -38,5 +68,12 @@ public:
 
 	UFUNCTION()
 	virtual void OnHealthChanged(UFHealthComponent* OwnerHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy | Animiation")
+	bool bIsDied;
+
+private:
+
+	void DissolveInterpUpdate(float DeltaTime);
 
 };

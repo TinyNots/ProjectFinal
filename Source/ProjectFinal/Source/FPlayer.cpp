@@ -14,6 +14,8 @@
 #include "Animation/AnimInstance.h"
 #include "ProjectFinal/ProjectFinal.h"
 #include "FEnemy.h"
+#include "TimerManager.h"
+#include "Components/BoxComponent.h"
 
 // Sets default values
 AFPlayer::AFPlayer()
@@ -37,11 +39,15 @@ AFPlayer::AFPlayer()
 
 	// Weapon Collision Setup
 	WeaponMeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMeshComp"));
-	WeaponMeshComp->SetCollisionObjectType(COLLISION_WEAPON);
 	WeaponMeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	WeaponMeshComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-	WeaponMeshComp->SetCollisionResponseToChannel(COLLISION_ENEMY, ECollisionResponse::ECR_Overlap);
 	WeaponMeshComp->SetupAttachment(GetMesh(), WeaponSocketName);
+
+	WeaponBoxComp = CreateDefaultSubobject<UBoxComponent>(TEXT("WeaponBoxComp"));
+	WeaponBoxComp->SetCollisionObjectType(COLLISION_WEAPON);
+	WeaponBoxComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	WeaponBoxComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	WeaponBoxComp->SetCollisionResponseToChannel(COLLISION_ENEMY, ECollisionResponse::ECR_Overlap);
+	WeaponBoxComp->SetupAttachment(WeaponMeshComp, WeaponSocketName);
 
 	bUseControllerRotationYaw = false;
 	UCharacterMovementComponent* CharacterMovementComp = GetCharacterMovement();
@@ -54,16 +60,25 @@ AFPlayer::AFPlayer()
 	CurrentCombo = 0;
 	bIsAttackPressed = false;
 	bReadyToNextAttack = false;
+
+	// Attack Rotation Init
 	AttackRotationInterpSpeed = 10.0f;
 	bStartAttackInterp = false;
 	TargetRotation = FRotator(0.0f);
 	YawRotationThreshold = 3.0f;
 	bIsAttacking = false;
 
+	// Hitstop Init
+	ToSlowMoDelay = 0.015f;			// Light Hit = 0.015f;	Heavy = ?	// New Light Hit = 0.015f;
+	SlowMoTimeDilation = 0.3f;		// Light Hit = 0.5f;	Heavy = ?	// New Light Hit = 0.3f;
+	ResetTimeDelay = 0.075f;		// Light Hit = 0.05f;	Heavy = ?	// New Light Hit = 0.075f;
+	bIsHitStopping = false;
+
 	// Animation Init
 	HeadInterpSpeed = 3.0f;
 	HeadDegreeThreshold = 120.0f;
 	bReadyToJump = true;
+	bIsInGame = false;
 }
 
 // Called when the game starts or when spawned
@@ -74,11 +89,15 @@ void AFPlayer::BeginPlay()
 	// Set camera pitch rotation
 	if (GetWorld())
 	{
-		APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(this, 0);
+		CameraManager = UGameplayStatics::GetPlayerCameraManager(this, 0);
 		if (CameraManager)
 		{
 			CameraManager->ViewPitchMin = -45.0f;
 			CameraManager->ViewPitchMax = 45.0f;
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("There's problem with your CameraManager"));
 		}
 	}
 
@@ -88,12 +107,15 @@ void AFPlayer::BeginPlay()
 		UE_LOG(LogTemp, Warning, TEXT("There's problem with your AnimInstace"));
 	}
 
-	WeaponMeshComp->OnComponentBeginOverlap.AddDynamic(this, &AFPlayer::CombatOnOverlapBegin);
+	WeaponBoxComp->OnComponentBeginOverlap.AddDynamic(this, &AFPlayer::CombatOnOverlapBegin);
+
+	bIsInGame = true;
 }
 
 void AFPlayer::HandleCombo()
 {
 	bReadyToNextAttack = true;
+	DisableAttackCollider();
 }
 
 void AFPlayer::RestartCombo()
@@ -154,7 +176,50 @@ void AFPlayer::CombatOnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AA
 	if (OtherActor && DamageTypeClass)
 	{
 		UGameplayStatics::ApplyDamage(OtherActor, 10.0f, GetController(), this, DamageTypeClass);
+
+		StartHitStop(OtherActor);
+
+		if (AttackHitSound)
+		{
+			FVector SoundLocation = FVector(SweepResult.Location);
+			UGameplayStatics::PlaySoundAtLocation(GetWorld(), (USoundBase*)AttackHitSound, SoundLocation);
+		}
 	}
+}
+
+void AFPlayer::ChangeHitStop(EHitStop HitStopPreset, float NewToSlowMoDelay, float NewSlowMoTimeDilation, float NewResetTimeDelay)
+{
+	switch (HitStopPreset)
+	{
+	case EHitStop::Light:
+		ToSlowMoDelay = 0.015f;
+		SlowMoTimeDilation = 0.3f;
+		ResetTimeDelay = 0.075f;
+		break;
+	case EHitStop::Medium:
+		UE_LOG(LogTemp,Warning,TEXT("Hit Stop Medium Preset haven't set yet."))
+		break;
+	case EHitStop::Heavy:
+		ToSlowMoDelay = 0.015f;
+		SlowMoTimeDilation = 0.1f;
+		ResetTimeDelay = 0.1f;
+		break;
+	case EHitStop::Custom:
+		ToSlowMoDelay = NewToSlowMoDelay;
+		SlowMoTimeDilation = NewSlowMoTimeDilation;
+		ResetTimeDelay = NewResetTimeDelay;
+		break;
+	}
+}
+
+void AFPlayer::EnableAttackCollider()
+{
+	WeaponBoxComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+}
+
+void AFPlayer::DisableAttackCollider()
+{
+	WeaponBoxComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void AFPlayer::MoveForward(float Value)
@@ -247,5 +312,60 @@ void AFPlayer::AttackRotationUpdate(float DeltaTime)
 		{
 			bStartAttackInterp = false;
 		}
+	}
+}
+
+void AFPlayer::ResetTimeDilation(AActor* OtherActor)
+{
+	CustomTimeDilation = 1.0f;
+	OtherActor->CustomTimeDilation = 1.0f;
+	bIsHitStopping = false;
+}
+
+void AFPlayer::SlowTimeDilation(AActor* OtherActor)
+{
+	CustomTimeDilation = SlowMoTimeDilation;
+	OtherActor->CustomTimeDilation = SlowMoTimeDilation;
+
+	if (ResetTimeDelay > 0.0f)
+	{
+		FTimerDelegate ResetTimerDel;
+		ResetTimerDel.BindUObject(this, &AFPlayer::ResetTimeDilation, OtherActor);
+
+		GetWorldTimerManager().SetTimer(TimeHandle_ResetTimeDilation, ResetTimerDel, ResetTimeDelay, false);
+	}
+	else
+	{
+		ResetTimeDilation(OtherActor);
+	}
+}
+
+void AFPlayer::StartHitStop(AActor* OtherActor)
+{
+	if (bIsHitStopping)
+	{
+		return;
+	}
+
+	bIsHitStopping = true;
+	CustomTimeDilation = 0.0f;
+	OtherActor->CustomTimeDilation = 0.0f;
+
+	if (AttackCamShake)
+	{
+		CameraManager = UGameplayStatics::GetPlayerCameraManager(this, 0);
+		CameraManager->PlayCameraShake(AttackCamShake);
+	}
+
+	if (ToSlowMoDelay > 0.0f)
+	{
+		FTimerDelegate SlowTimerDel;
+		SlowTimerDel.BindUObject(this, &AFPlayer::SlowTimeDilation, OtherActor);
+
+		GetWorldTimerManager().SetTimer(TimeHandle_SlowTimeDilation, SlowTimerDel, ToSlowMoDelay, false);
+	}
+	else
+	{
+		SlowTimeDilation(OtherActor);
 	}
 }
