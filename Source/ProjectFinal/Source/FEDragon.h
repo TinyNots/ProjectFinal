@@ -6,9 +6,8 @@
 #include "FEnemy.h"
 #include "FEDragon.generated.h"
 
-/**
- * 
- */
+class USphereComponent;
+
 UCLASS()
 class PROJECTFINAL_API AFEDragon : public AFEnemy
 {
@@ -22,6 +21,9 @@ protected:
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EDragon")
+	USphereComponent* CombatSphereComp;
 
 public:
 

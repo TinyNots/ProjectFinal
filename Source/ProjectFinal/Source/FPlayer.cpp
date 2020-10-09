@@ -193,7 +193,7 @@ void AFPlayer::ChangeHitStop(EHitStop HitStopPreset, float NewToSlowMoDelay, flo
 	{
 	case EHitStop::Light:
 		ToSlowMoDelay = 0.015f;
-		SlowMoTimeDilation = 0.3f;
+		SlowMoTimeDilation = 0.5f;
 		ResetTimeDelay = 0.075f;
 		break;
 	case EHitStop::Medium:

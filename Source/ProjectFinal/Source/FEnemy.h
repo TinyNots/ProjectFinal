@@ -10,6 +10,7 @@ class UFHealthComponent;
 class UAnimMontage;
 class UAnimInstance;
 class UBehaviorTree;
+class UAIPerceptionComponent;
 
 UCLASS()
 class PROJECTFINAL_API AFEnemy : public ACharacter
@@ -28,13 +29,16 @@ protected:
 	UFHealthComponent* HealthComp;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy")
-	UAnimMontage* DieMontage;
+	UAnimMontage* AttackMontage;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Enemy")
 	UAnimInstance* AnimInstance;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy")
 	UBehaviorTree* BehaviorTree;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
+	UAIPerceptionComponent* AIPerceptionComp;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy")
 	float DestroyLifeSpan;
@@ -64,6 +68,7 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	UFUNCTION(BlueprintCallable, Category = "Enemy")
 	virtual void Attack();
 
 	UFUNCTION()

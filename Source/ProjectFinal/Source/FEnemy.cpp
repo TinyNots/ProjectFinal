@@ -9,6 +9,7 @@
 #include "Animation/AnimInstance.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AIController.h"
+#include "Perception/AIPerceptionComponent.h"
 
 // Sets default values
 AFEnemy::AFEnemy()
@@ -28,12 +29,14 @@ AFEnemy::AFEnemy()
 	MeshComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	MeshComp->SetCollisionResponseToChannel(COLLISION_WEAPON, ECollisionResponse::ECR_Overlap);
 
+	AIPerceptionComp = CreateDefaultSubobject<UAIPerceptionComponent>("AIPerceptionComp");
+
 	bIsDied = false;
 	DestroyLifeSpan = 10.0f;
 
 	// Disable rotation yaw for AI Controller
 	bUseControllerRotationYaw = false;
-	GetCharacterMovement()->bUseControllerDesiredRotation = true;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
 
 	// Dissolve Init
 	bStartDissolve = false;
@@ -88,6 +91,11 @@ void AFEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 void AFEnemy::Attack()
 {
+	if (AnimInstance && AttackMontage)
+	{
+		AnimInstance->Montage_Play(AttackMontage);
+		AnimInstance->Montage_JumpToSection("Attack01");
+	}
 }
 
 void AFEnemy::OnHealthChanged(UFHealthComponent* OwnerHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)

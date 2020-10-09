@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 
-#define COLLISION_ENEMY		ECollisionChannel::ECC_GameTraceChannel1
-#define COLLISION_PLAYER	ECollisionChannel::ECC_GameTraceChannel2
-#define COLLISION_WEAPON	ECollisionChannel::ECC_GameTraceChannel3
+#define COLLISION_ENEMY			ECollisionChannel::ECC_GameTraceChannel1
+#define COLLISION_PLAYER		ECollisionChannel::ECC_GameTraceChannel2
+#define COLLISION_WEAPON		ECollisionChannel::ECC_GameTraceChannel3
+#define COLLISION_ENEMY_ATTACK	ECollisionChannel::ECC_GameTraceChannel4
