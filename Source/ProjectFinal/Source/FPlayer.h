@@ -18,6 +18,7 @@ class USoundCue;
 class UBoxComponent;
 class UCameraShake;
 class AFEnemy;
+class UParticleSystem;
 
 UCLASS()
 class PROJECTFINAL_API AFPlayer : public ACharacter
@@ -124,6 +125,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player")
 	bool bIsGettingHit;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player | Attack")
+	UParticleSystem* HitParticle;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player | Attack")
+	FName HitSocketName;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -150,7 +157,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ChangeHitStop(EHitStop HitStopPreset, float NewToSlowMoDelay = 0.0f, float NewSlowMoTimeDilation = 0.0f, float NewResetTimeDelay = 0.0f);
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Animaiton")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Animation")
 	bool bIsInGame;
 
 	UFUNCTION(BlueprintCallable)

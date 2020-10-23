@@ -17,6 +17,7 @@
 #include "TimerManager.h"
 #include "Components/BoxComponent.h"
 #include "FPlayerController.h"
+#include "Engine/SkeletalMeshSocket.h"
 
 // Sets default values
 AFPlayer::AFPlayer()
@@ -188,10 +189,12 @@ void AFPlayer::CombatOnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AA
 
 		StartHitStop(Enemy);
 
-		if (AttackHitSound)
+		if (AttackHitSound && HitParticle)
 		{
-			FVector SoundLocation = FVector(SweepResult.Location);
-			UGameplayStatics::PlaySoundAtLocation(GetWorld(), (USoundBase*)AttackHitSound, SoundLocation);
+			FVector HitLocation = GetMesh()->GetSocketByName(HitSocketName)->GetSocketLocation(GetMesh());
+			FVector SpawnLocation = OtherActor->GetActorLocation();
+			UGameplayStatics::PlaySoundAtLocation(GetWorld(), (USoundBase*)AttackHitSound, HitLocation);
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), HitParticle, HitLocation);
 		}
 	}
 }
