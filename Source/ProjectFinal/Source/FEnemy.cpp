@@ -10,6 +10,10 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AIController.h"
 #include "Perception/AIPerceptionComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "FPlayer.h"
+#include "Components/WidgetComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 // Sets default values
 AFEnemy::AFEnemy()
@@ -20,7 +24,9 @@ AFEnemy::AFEnemy()
 	HealthComp = CreateDefaultSubobject<UFHealthComponent>(TEXT("HealthComp"));
 
 	// Collision Setup
-	GetCapsuleComponent()->SetGenerateOverlapEvents(false);
+	UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
+	CapsuleComp->SetGenerateOverlapEvents(false);
+	CapsuleComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
 
 	USkeletalMeshComponent* MeshComp = GetMesh();
 	MeshComp->SetGenerateOverlapEvents(true);
@@ -29,7 +35,10 @@ AFEnemy::AFEnemy()
 	MeshComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	MeshComp->SetCollisionResponseToChannel(COLLISION_WEAPON, ECollisionResponse::ECR_Overlap);
 
-	AIPerceptionComp = CreateDefaultSubobject<UAIPerceptionComponent>("AIPerceptionComp");
+	AIPerceptionComp = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("AIPerceptionComp"));
+
+	HealthWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthWidgetComp"));
+	HealthWidgetComp->SetupAttachment(GetCapsuleComponent());
 
 	bIsDied = false;
 	DestroyLifeSpan = 10.0f;
@@ -44,6 +53,11 @@ AFEnemy::AFEnemy()
 	DissolveTargetValue = -1.0f;
 	DissolveInterpSpeed = 0.5f;
 	DissolveDelayTime = 2.0f;
+
+	AttackDamage = 10.0f;
+	bCanKnockBack = true;
+	KnockBackPoPitchAngle = 45.0f;
+	KnockBackPower = 500.0f;
 }
 
 // Called when the game starts or when spawned
@@ -67,6 +81,12 @@ void AFEnemy::BeginPlay()
 			AIController->RunBehaviorTree(BehaviorTree);
 		}
 	}
+
+	CameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0);
+	if (!CameraManager)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Unable to get camera manager"));
+	}
 }
 
 void AFEnemy::StartDissolve()
@@ -80,6 +100,10 @@ void AFEnemy::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	DissolveInterpUpdate(DeltaTime);
+
+	FRotator NewRotation = UKismetMathLibrary::FindLookAtRotation(HealthWidgetComp->GetComponentLocation(), CameraManager->GetCameraLocation());
+	NewRotation.Roll = 0.0f;
+	HealthWidgetComp->SetWorldRotation(NewRotation);
 }
 
 // Called to bind functionality to input
@@ -103,6 +127,11 @@ void AFEnemy::OnHealthChanged(UFHealthComponent* OwnerHealthComp, float Health, 
 	if (Health <= 0.0f && !bIsDied)
 	{
 		bIsDied = true;
+		
+		if (AnimInstance && AttackMontage)
+		{
+			AnimInstance->Montage_Stop(0.0, AttackMontage);
+		}
 
 		GetCharacterMovement()->StopMovementImmediately();
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -110,6 +139,44 @@ void AFEnemy::OnHealthChanged(UFHealthComponent* OwnerHealthComp, float Health, 
 
 		DetachFromControllerPendingDestroy();
 		SetLifeSpan(DestroyLifeSpan);
+	}
+}
+
+void AFEnemy::EnableAttackCollision()
+{
+	
+}
+
+void AFEnemy::DisableAttackCollision()
+{
+
+}
+
+void AFEnemy::CombatOnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor && DamageTypeClass)
+	{
+		UGameplayStatics::ApplyDamage(OtherActor, AttackDamage, GetController(), this, DamageTypeClass);
+
+		AFPlayer* MyPlayer = Cast<AFPlayer>(OtherActor);
+		if (MyPlayer)
+		{
+			FRotator LaunchDirection = GetActorRotation();
+			LaunchDirection.Pitch += KnockBackPoPitchAngle;
+			FVector LaunchVelocity = LaunchDirection.Vector() * KnockBackPower;
+
+			MyPlayer->LaunchCharacter(LaunchVelocity, true, true);
+
+			MyPlayer->PlayHitReaction();
+		}
+
+		/*StartHitStop(OtherActor);*/
+
+		/*if (AttackHitSound)
+		{
+			FVector SoundLocation = FVector(SweepResult.Location);
+			UGameplayStatics::PlaySoundAtLocation(GetWorld(), (USoundBase*)AttackHitSound, SoundLocation);
+		}*/
 	}
 }
 

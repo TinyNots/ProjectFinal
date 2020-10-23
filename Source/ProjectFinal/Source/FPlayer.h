@@ -16,6 +16,8 @@ class UAnimInstance;
 class APlayerCameraManager;
 class USoundCue;
 class UBoxComponent;
+class UCameraShake;
+class AFEnemy;
 
 UCLASS()
 class PROJECTFINAL_API AFPlayer : public ACharacter
@@ -56,6 +58,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Player")
 	APlayerCameraManager* CameraManager;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player")
+	UAnimMontage* HitMontage;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
 	int CurrentCombo;
@@ -113,6 +118,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Player | Attack")
 	USoundCue* AttackHitSound;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
+	TArray<AFEnemy*> HitEnemyList;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player")
+	bool bIsGettingHit;
 
 public:	
 	// Called every frame
@@ -148,6 +158,14 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void DisableAttackCollider();
+
+	UFUNCTION(BlueprintCallable)
+	void ClearHitEnemyList();
+
+	void PlayHitReaction();
+
+	UFUNCTION(BlueprintCallable)
+	void EnableMovementInput();
 
 private:
 

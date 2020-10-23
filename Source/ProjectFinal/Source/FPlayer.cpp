@@ -16,6 +16,7 @@
 #include "FEnemy.h"
 #include "TimerManager.h"
 #include "Components/BoxComponent.h"
+#include "FPlayerController.h"
 
 // Sets default values
 AFPlayer::AFPlayer()
@@ -133,12 +134,6 @@ void AFPlayer::Tick(float DeltaTime)
 	NextAttackCheck();
 
 	AttackRotationUpdate(DeltaTime);
-
-	if (GetCharacterMovement()->IsFalling())
-	{
-		UE_LOG(LogTemp, Log, TEXT("Test"));
-	}
-
 }
 
 // Called to bind functionality to input
@@ -173,11 +168,25 @@ void AFPlayer::Jump()
 
 void AFPlayer::CombatOnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor && DamageTypeClass)
+	AFEnemy* Enemy = Cast<AFEnemy>(OtherActor);
+	if (Enemy && DamageTypeClass)
 	{
-		UGameplayStatics::ApplyDamage(OtherActor, 10.0f, GetController(), this, DamageTypeClass);
+		if (HitEnemyList.Num() != 0)
+		{
+			for (auto & HitEnemy : HitEnemyList)
+			{
+				if (HitEnemy == Enemy)
+				{
+					return;
+				}
+			}
+		}
 
-		StartHitStop(OtherActor);
+		HitEnemyList.AddUnique(Enemy);
+
+		UGameplayStatics::ApplyDamage(Enemy, 10.0f, GetController(), this, DamageTypeClass);
+
+		StartHitStop(Enemy);
 
 		if (AttackHitSound)
 		{
@@ -222,20 +231,55 @@ void AFPlayer::DisableAttackCollider()
 	WeaponBoxComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
+void AFPlayer::ClearHitEnemyList()
+{
+	HitEnemyList.Empty();
+}
+
+void AFPlayer::PlayHitReaction()
+{
+	if (AnimInstance && HitMontage)
+	{
+		bReadyToJump = true;
+		bIsGettingHit = true;
+		CurrentCombo = 0;
+
+		int Random = FMath::RandRange(1, 2);
+
+		FString StringHitName = "Hit0";
+		StringHitName.AppendInt(Random);
+		FName HitSectionName = FName(*StringHitName);
+
+		AnimInstance->Montage_Play(HitMontage);
+		AnimInstance->Montage_JumpToSection(HitSectionName, HitMontage);
+	}
+}
+
+void AFPlayer::EnableMovementInput()
+{
+	bIsGettingHit = false;
+}
+
 void AFPlayer::MoveForward(float Value)
 {
-	AddMovementInput(CameraComp->GetForwardVector() * Value);
+	if (!bIsGettingHit)
+	{
+		AddMovementInput(CameraComp->GetForwardVector() * Value);
+	}
 }
 
 void AFPlayer::MoveRight(float Value)
 {
-	AddMovementInput(CameraComp->GetRightVector() * Value);
+	if (!bIsGettingHit)
+	{
+		AddMovementInput(CameraComp->GetRightVector() * Value);
+	}
 }
 
 void AFPlayer::Attack()
 {
 	bIsAttackPressed = true;
-	if (AnimInstance && AttackMontage && !GetCharacterMovement()->IsFalling())
+	if (AnimInstance && AttackMontage && !GetCharacterMovement()->IsFalling() && !bIsGettingHit)
 	{
 		if (AnimInstance->Montage_IsPlaying(AttackMontage))
 		{
@@ -245,6 +289,8 @@ void AFPlayer::Attack()
 		bIsAttackPressed = false;
 		bIsAttacking = true;
 		CurrentCombo++;
+
+		HitEnemyList.Empty();
 
 		// Start Interp To Last Input Direction
 		bStartAttackInterp = true;
@@ -262,13 +308,11 @@ void AFPlayer::ToNextAttack()
 		bReadyToNextAttack = false;
 		CurrentCombo++;
 
+		HitEnemyList.Empty();
+
 		// Start Interp To Last Input Direction
 		bStartAttackInterp = true;
 		TargetRotation = GetLastMovementInputVector().Rotation();
-
-		FString StringComboName = "Combo0";
-		StringComboName.AppendInt(CurrentCombo);
-		FName ComboSectionName = FName(*StringComboName);
 
 		AnimInstance->Montage_Stop(0.1f, AttackMontage);
 		PlayAttackMontage();

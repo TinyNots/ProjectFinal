@@ -11,6 +11,7 @@ class UAnimMontage;
 class UAnimInstance;
 class UBehaviorTree;
 class UAIPerceptionComponent;
+class UWidgetComponent;
 
 UCLASS()
 class PROJECTFINAL_API AFEnemy : public ACharacter
@@ -40,6 +41,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
 	UAIPerceptionComponent* AIPerceptionComp;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
+	UWidgetComponent* HealthWidgetComp;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy")
 	float DestroyLifeSpan;
 
@@ -61,6 +65,23 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	void StartDissolve();
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy | Attack")
+	TSubclassOf<UDamageType> DamageTypeClass;
+
+	UPROPERTY(EditDefaultsOnly,BlueprintReadOnly,Category = "Enemy | Attack")
+	float AttackDamage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy | Attack")
+	bool bCanKnockBack;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy | Attack")
+	float KnockBackPoPitchAngle;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy | Attack")
+	float KnockBackPower;
+
+	APlayerCameraManager* CameraManager;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -76,6 +97,15 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy | Animiation")
 	bool bIsDied;
+
+	UFUNCTION(BlueprintCallable, Category = "Enemy")
+	virtual void EnableAttackCollision();
+
+	UFUNCTION(BlueprintCallable, Category = "Enemy")
+	virtual void DisableAttackCollision();
+
+	UFUNCTION()
+	virtual	void CombatOnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 private:
 
