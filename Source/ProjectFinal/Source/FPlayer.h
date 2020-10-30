@@ -54,6 +54,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player")
 	UAnimMontage* AttackMontage;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player")
+	UAnimMontage* HeavyAttackMontage;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Player")
 	UAnimInstance* AnimInstance;
 
@@ -68,6 +71,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
 	bool bIsAttackPressed;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
+	bool bIsHeavyAttackPressed;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
 	bool bReadyToNextAttack;
@@ -131,6 +137,24 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player | Attack")
 	FName HitSocketName;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | ChargeAttack")
+	bool bIsCharging;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | ChargeAttack")
+	float ChargeTimer;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player | ChargeAttack")
+	float ChargeDelay;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player | ChargeAttack")
+	FString ChargeAttackSectionName;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player | ChargeAttack")
+	FString ChargeHeavyAttackSectionName;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
+	AFEnemy* CombatTarget;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -182,11 +206,19 @@ private:
 
 	void Attack();
 
+	void AttackCharge();
+
+	void HeavyAttack();
+
+	void HeavyAttackCharge();
+
 	void ToNextAttack();
 
 	void NextAttackCheck();
 
-	void PlayAttackMontage();
+	void PlayAttackMontage(UAnimMontage* Montage);
+
+	void PlayAttackMontage(UAnimMontage* Montage, FString SectionName);
 
 	void AttackRotationUpdate(float DeltaTime);
 
@@ -195,4 +227,6 @@ private:
 	void SlowTimeDilation(AActor* OtherActor);
 
 	void StartHitStop(AActor* OtherActor);
+
+	void ChargeAttackTimerUpdate(float DeltaTime);
 };

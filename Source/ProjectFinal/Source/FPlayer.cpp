@@ -61,7 +61,9 @@ AFPlayer::AFPlayer()
 
 	CurrentCombo = 0;
 	bIsAttackPressed = false;
+	bIsHeavyAttackPressed = false;
 	bReadyToNextAttack = false;
+	bIsCharging = false;
 
 	// Attack Rotation Init
 	AttackRotationInterpSpeed = 10.0f;
@@ -125,6 +127,8 @@ void AFPlayer::RestartCombo()
 	CurrentCombo = 0;
 	bReadyToNextAttack = false;
 	bIsAttacking = false;
+	bIsAttackPressed = false;
+	bIsHeavyAttackPressed = false;
 }
 
 // Called every frame
@@ -135,6 +139,14 @@ void AFPlayer::Tick(float DeltaTime)
 	NextAttackCheck();
 
 	AttackRotationUpdate(DeltaTime);
+
+	ChargeAttackTimerUpdate(DeltaTime);
+
+	// Debug
+	if (CombatTarget && CombatTarget->bIsDied)
+	{
+		CombatTarget = nullptr;
+	}
 }
 
 // Called to bind functionality to input
@@ -149,6 +161,9 @@ void AFPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAxis("Turn", this, &AFPlayer::AddControllerYawInput);
 
 	PlayerInputComponent->BindAction("Attack", EInputEvent::IE_Pressed, this, &AFPlayer::Attack);
+	PlayerInputComponent->BindAction("Attack", EInputEvent::IE_Released, this, &AFPlayer::AttackCharge);
+	PlayerInputComponent->BindAction("HeavyAttack", EInputEvent::IE_Pressed, this, &AFPlayer::HeavyAttack);
+	PlayerInputComponent->BindAction("HeavyAttack", EInputEvent::IE_Released, this, &AFPlayer::HeavyAttackCharge);
 	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Pressed, this, &AFPlayer::Jump);
 }
 
@@ -172,6 +187,12 @@ void AFPlayer::CombatOnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AA
 	AFEnemy* Enemy = Cast<AFEnemy>(OtherActor);
 	if (Enemy && DamageTypeClass)
 	{
+		// Debug
+		if (!CombatTarget)
+		{
+			CombatTarget = Enemy;
+		}
+
 		if (HitEnemyList.Num() != 0)
 		{
 			for (auto & HitEnemy : HitEnemyList)
@@ -243,9 +264,11 @@ void AFPlayer::PlayHitReaction()
 {
 	if (AnimInstance && HitMontage)
 	{
+		bIsAttacking = false;
+		CurrentCombo = 0;
+
 		bReadyToJump = true;
 		bIsGettingHit = true;
-		CurrentCombo = 0;
 
 		int Random = FMath::RandRange(1, 2);
 
@@ -281,10 +304,13 @@ void AFPlayer::MoveRight(float Value)
 
 void AFPlayer::Attack()
 {
+	// debug
+	bIsCharging = true;
+
 	bIsAttackPressed = true;
 	if (AnimInstance && AttackMontage && !GetCharacterMovement()->IsFalling() && !bIsGettingHit)
 	{
-		if (AnimInstance->Montage_IsPlaying(AttackMontage))
+		if (AnimInstance->Montage_IsPlaying(AttackMontage) || bIsAttacking)
 		{
 			return;
 		}
@@ -299,16 +325,44 @@ void AFPlayer::Attack()
 		bStartAttackInterp = true;
 		TargetRotation = GetLastMovementInputVector().Rotation();
 
-		PlayAttackMontage();
+		PlayAttackMontage(AttackMontage);
 	}
 }
 
-void AFPlayer::ToNextAttack()
+void AFPlayer::AttackCharge()
 {
-	if (AnimInstance && AttackMontage)
+	bIsCharging = false;
+	if (ChargeTimer >= ChargeDelay)
 	{
 		bIsAttackPressed = false;
-		bReadyToNextAttack = false;
+		bIsAttacking = true;
+
+		HitEnemyList.Empty();
+
+		bStartAttackInterp = true;
+		TargetRotation = GetLastMovementInputVector().Rotation();
+
+		ChangeHitStop(EHitStop::Custom, 0.1f, 0.025f, 0.1f);
+		PlayAttackMontage(AttackMontage, ChargeAttackSectionName);
+	}
+	ChargeTimer = 0.0f;
+}
+
+void AFPlayer::HeavyAttack()
+{
+	// debug
+	bIsCharging = true;
+
+	bIsHeavyAttackPressed = true;
+	if (AnimInstance && HeavyAttackMontage && !GetCharacterMovement()->IsFalling() && !bIsGettingHit)
+	{
+		if (AnimInstance->Montage_IsPlaying(HeavyAttackMontage) || bIsAttacking)
+		{
+			return;
+		}
+
+		bIsHeavyAttackPressed = false;
+		bIsAttacking = true;
 		CurrentCombo++;
 
 		HitEnemyList.Empty();
@@ -317,27 +371,88 @@ void AFPlayer::ToNextAttack()
 		bStartAttackInterp = true;
 		TargetRotation = GetLastMovementInputVector().Rotation();
 
-		AnimInstance->Montage_Stop(0.1f, AttackMontage);
-		PlayAttackMontage();
+		PlayAttackMontage(HeavyAttackMontage);
 	}
+}
+
+void AFPlayer::HeavyAttackCharge()
+{
+	bIsCharging = false;
+	if (ChargeTimer >= ChargeDelay)
+	{
+		bIsHeavyAttackPressed = false;
+		bIsAttacking = true;
+
+		HitEnemyList.Empty();
+
+		bStartAttackInterp = true;
+		TargetRotation = GetLastMovementInputVector().Rotation();
+
+		ChangeHitStop(EHitStop::Custom, 0.1f, 0.025f, 0.1f);
+		PlayAttackMontage(HeavyAttackMontage, ChargeHeavyAttackSectionName);
+	}
+	ChargeTimer = 0.0f;
+}
+
+void AFPlayer::ToNextAttack()
+{
+	if (!AnimInstance || !AttackMontage || !HeavyAttackMontage)
+	{
+		return;
+	}
+
+	bIsAttackPressed = false;
+	bIsHeavyAttackPressed = false;
+	bReadyToNextAttack = false;
+	CurrentCombo++;
+
+	HitEnemyList.Empty();
+
+	// Start Interp To Last Input Direction
+	bStartAttackInterp = true;
+	TargetRotation = GetLastMovementInputVector().Rotation();
+
+	AnimInstance->Montage_Stop(0.1f, AnimInstance->GetCurrentActiveMontage());
+
+	//PlayAttackMontage(HeavyAttackMontage);
 }
 
 void AFPlayer::NextAttackCheck()
 {
-	if (bIsAttackPressed && bReadyToNextAttack)
+	if (bReadyToNextAttack)
 	{
-		ToNextAttack();
+		if (bIsAttackPressed)
+		{
+			ToNextAttack();
+			PlayAttackMontage(AttackMontage);
+		}
+
+		if (bIsHeavyAttackPressed)
+		{
+			ToNextAttack();
+			PlayAttackMontage(HeavyAttackMontage);
+		}
 	}
 }
 
-void AFPlayer::PlayAttackMontage()
+void AFPlayer::PlayAttackMontage(UAnimMontage* Montage)
 {
-	FString StringComboName = "Combo0";
-	StringComboName.AppendInt(CurrentCombo);
-	FName ComboSectionName = FName(*StringComboName);
+	FString SectionName = "Combo0";
+	if (Montage == HeavyAttackMontage)
+	{
+		SectionName = "HeavyCombo0";
+	}
 
-	AnimInstance->Montage_Play(AttackMontage);
-	AnimInstance->Montage_JumpToSection(ComboSectionName, AttackMontage);
+	SectionName.AppendInt(CurrentCombo);
+	
+	PlayAttackMontage(Montage, SectionName);
+}
+
+void AFPlayer::PlayAttackMontage(UAnimMontage* Montage, FString SectionName)
+{
+	FName ComboSectionName = FName(*SectionName);
+	AnimInstance->Montage_Play(Montage);
+	AnimInstance->Montage_JumpToSection(ComboSectionName, Montage);
 }
 
 void AFPlayer::AttackRotationUpdate(float DeltaTime)
@@ -346,8 +461,15 @@ void AFPlayer::AttackRotationUpdate(float DeltaTime)
 	{
 		if (TargetRotation == FRotator::ZeroRotator)
 		{
-			bStartAttackInterp = false;
-			return;
+			if (CombatTarget)
+			{
+				TargetRotation = (CombatTarget->GetActorLocation() - GetActorLocation()).Rotation();
+			}
+			else
+			{
+				bStartAttackInterp = false;
+				return;
+			}
 		}
 
 		FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, AttackRotationInterpSpeed);
@@ -414,5 +536,13 @@ void AFPlayer::StartHitStop(AActor* OtherActor)
 	else
 	{
 		SlowTimeDilation(OtherActor);
+	}
+}
+
+void AFPlayer::ChargeAttackTimerUpdate(float DeltaTime)
+{
+	if (bIsCharging)
+	{
+		ChargeTimer += 1.0f * DeltaTime;
 	}
 }
