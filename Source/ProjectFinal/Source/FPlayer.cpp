@@ -64,6 +64,7 @@ AFPlayer::AFPlayer()
 	bIsHeavyAttackPressed = false;
 	bReadyToNextAttack = false;
 	bIsCharging = false;
+	TargetDistanceLimit = 500.0f;
 
 	// Attack Rotation Init
 	AttackRotationInterpSpeed = 10.0f;
@@ -143,10 +144,16 @@ void AFPlayer::Tick(float DeltaTime)
 	ChargeAttackTimerUpdate(DeltaTime);
 
 	// Debug
-	if (CombatTarget && CombatTarget->bIsDied)
+	if (CombatTarget)
 	{
-		CombatTarget = nullptr;
+		float Distance = FVector::Dist(GetActorLocation(), CombatTarget->GetActorLocation());
+		if (Distance > TargetDistanceLimit || CombatTarget->bIsDied)
+		{
+			CombatTarget = nullptr;
+		}
 	}
+
+
 }
 
 // Called to bind functionality to input
@@ -188,7 +195,7 @@ void AFPlayer::CombatOnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AA
 	if (Enemy && DamageTypeClass)
 	{
 		// Debug
-		if (!CombatTarget)
+		if (!CombatTarget || CombatTarget != Enemy)
 		{
 			CombatTarget = Enemy;
 		}

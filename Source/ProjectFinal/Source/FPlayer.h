@@ -155,6 +155,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player | Attack")
 	AFEnemy* CombatTarget;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player | Attack")
+	float TargetDistanceLimit;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
