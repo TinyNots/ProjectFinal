@@ -12,6 +12,7 @@ class UAnimInstance;
 class UBehaviorTree;
 class UAIPerceptionComponent;
 class UWidgetComponent;
+class APlayerCameraManager;
 
 UCLASS()
 class PROJECTFINAL_API AFEnemy : public ACharacter
@@ -43,6 +44,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
 	UWidgetComponent* HealthWidgetComp;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy")
+	UAnimMontage* GetHitMontage;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy")
 	float DestroyLifeSpan;
@@ -106,9 +110,13 @@ public:
 
 	UFUNCTION()
 	virtual	void CombatOnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-
+	
+	const bool GetIsGettingHit() const;
+	
 private:
 
 	void DissolveInterpUpdate(float DeltaTime);
+
+	void PlayHitReaction();
 
 };

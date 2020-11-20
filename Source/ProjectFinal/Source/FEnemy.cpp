@@ -124,14 +124,16 @@ void AFEnemy::Attack()
 
 void AFEnemy::OnHealthChanged(UFHealthComponent* OwnerHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
 {
+	PlayHitReaction();
+
 	if (Health <= 0.0f && !bIsDied)
 	{
-		bIsDied = true;
-		
 		if (AnimInstance && AttackMontage)
 		{
-			AnimInstance->Montage_Stop(0.0, AttackMontage);
+			AnimInstance->StopAllMontages(0.0f);
 		}
+
+		bIsDied = true;
 
 		GetCharacterMovement()->StopMovementImmediately();
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -180,6 +182,15 @@ void AFEnemy::CombatOnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AAc
 	}
 }
 
+const bool AFEnemy::GetIsGettingHit() const
+{
+	if (AnimInstance && GetHitMontage)
+	{
+		return AnimInstance->Montage_IsPlaying(GetHitMontage);
+	}
+	return false;
+}
+
 void AFEnemy::DissolveInterpUpdate(float DeltaTime)
 {
 	if (bStartDissolve)
@@ -191,5 +202,14 @@ void AFEnemy::DissolveInterpUpdate(float DeltaTime)
 		{
 			bStartDissolve = false;
 		}
+	}
+}
+
+void AFEnemy::PlayHitReaction()
+{
+	if (AnimInstance && GetHitMontage)
+	{
+		DisableAttackCollision();
+		AnimInstance->Montage_Play(GetHitMontage);
 	}
 }

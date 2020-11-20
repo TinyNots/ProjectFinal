@@ -153,7 +153,7 @@ void AFPlayer::Tick(float DeltaTime)
 		}
 	}
 
-
+	bPressedJump = false;
 }
 
 // Called to bind functionality to input
@@ -177,16 +177,6 @@ void AFPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 UCameraComponent* AFPlayer::GetCameraComponent()
 {
 	return CameraComp;
-}
-
-void AFPlayer::Jump()
-{
-	if (bReadyToJump && !bIsAttacking)
-	{
-		bReadyToJump = false;
-		bPressedJump = true;
-		JumpKeyHoldTime = 0.0f;
-	}
 }
 
 void AFPlayer::CombatOnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
